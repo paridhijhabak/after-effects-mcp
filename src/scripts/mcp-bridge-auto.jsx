@@ -176,6 +176,54 @@ function createSolidLayer(args) {
 }
 
 
+function importImage(args) {
+    try {
+        var filePath = args.filePath;
+        if (!filePath) { throw new Error("filePath is required"); }
+        var file = new File(filePath);
+        if (!file.exists) { throw new Error("File does not exist: " + filePath); }
+
+        var importOptions = new ImportOptions(file);
+        var footageItem = app.project.importFile(importOptions);
+
+        var compName = args.compName || "";
+        var comp = null;
+        for (var i = 1; i <= app.project.numItems; i++) {
+            var item = app.project.item(i);
+            if (item instanceof CompItem && item.name === compName) { comp = item; break; }
+        }
+        if (!comp && app.project.activeItem instanceof CompItem) {
+            comp = app.project.activeItem;
+        }
+
+        var layerInfo = null;
+        if (comp) {
+            var layer = comp.layers.add(footageItem);
+            var startTime = args.startTime || 0;
+            var duration = args.duration;
+            layer.startTime = startTime;
+            if (duration) { layer.outPoint = startTime + duration; }
+            if (args.name) { layer.name = args.name; }
+            if (args.position) { layer.property("Position").setValue(args.position); }
+            if (args.scale) { layer.property("Scale").setValue(args.scale); }
+            layerInfo = {
+                name: layer.name, index: layer.index, type: "footage",
+                inPoint: layer.inPoint, outPoint: layer.outPoint,
+                position: layer.property("Position").value, scale: layer.property("Scale").value
+            };
+        }
+
+        return JSON.stringify({
+            status: "success", message: "Image imported successfully",
+            footage: { name: footageItem.name, id: footageItem.id, width: footageItem.width, height: footageItem.height },
+            layer: layerInfo
+        }, null, 2);
+    } catch (error) {
+        return JSON.stringify({ status: "error", message: error.toString() }, null, 2);
+    }
+}
+
+
 function setLayerProperties(args) {
     try {
         var compName = args.compName || "";
@@ -2362,6 +2410,11 @@ function executeCommand(command, args) {
                 logToPanel("Calling setLayerProperties function...");
                 result = setLayerProperties(args);
                 logToPanel("Returned from setLayerProperties.");
+                break;
+            case "importImage":
+                logToPanel("Calling importImage function...");
+                result = importImage(args);
+                logToPanel("Returned from importImage.");
                 break;
             case "setLayerKeyframe":
                 logToPanel("Calling setLayerKeyframe function...");

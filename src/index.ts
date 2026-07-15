@@ -23,10 +23,23 @@ const TEMP_DIR = path.join(__dirname, "temp");
 
 
 
+function getDocumentsDir(): string {
+  if (process.platform === "win32") {
+    try {
+      const out = execSync(
+        `powershell -NoProfile -Command "[Environment]::GetFolderPath('MyDocuments')"`
+      ).toString().trim();
+      if (out) return out;
+    } catch {
+
+    }
+  }
+  return path.join(os.homedir(), "Documents");
+}
+
 function getAETempDir(): string {
-  const homeDir = os.homedir();
-  const bridgeDir = path.join(homeDir, 'Documents', 'ae-mcp-bridge');
-  
+  const bridgeDir = path.join(getDocumentsDir(), 'ae-mcp-bridge');
+
   if (!fs.existsSync(bridgeDir)) {
     fs.mkdirSync(bridgeDir, { recursive: true });
   }
@@ -168,14 +181,14 @@ function uniqueExistingDirs(pathsToCheck: string[]): string[] {
 }
 
 function getDefaultPresetRoots(): string[] {
-  const home = os.homedir();
+  const documents = getDocumentsDir();
   const appData = process.env.APPDATA || "";
   const programFiles = process.env.ProgramFiles || "C:\\Program Files";
 
   const roots = [
-    path.join(home, "Documents", "Adobe"),
-    path.join(home, "Documents", "Adobe", "After Effects"),
-    path.join(home, "Documents", "Adobe", "After Effects User Presets"),
+    path.join(documents, "Adobe"),
+    path.join(documents, "Adobe", "After Effects"),
+    path.join(documents, "Adobe", "After Effects User Presets"),
     path.join(appData, "Adobe", "After Effects"),
     path.join(programFiles, "Adobe", "Adobe After Effects 2026", "Support Files", "Presets"),
     path.join(programFiles, "Adobe", "Adobe After Effects 2025", "Support Files", "Presets"),
@@ -299,6 +312,7 @@ server.tool(
       "createTextLayer",
       "createShapeLayer",
       "createSolidLayer",
+      "importImage",
       "createAdjustmentLayer",
       "centerLayers",
       "getLayerClipFrames",
